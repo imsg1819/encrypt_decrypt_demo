@@ -1,3 +1,5 @@
+
+
 from flask import Flask, request, jsonify
 import uuid
 import psycopg2
@@ -7,11 +9,12 @@ import base64
 
 app = Flask(__name__)
 
-# Database configuration
-DB_HOST = 'localhost'
-DB_NAME = 'my_database'  # Update this if necessary
-DB_USER = 'myuser'       # Change this to your desired username
-DB_PASS = 'mysecretpassword'  # Change this to your desired password
+
+DB_HOST = 'localhost'  # Use the container name as the host
+DB_NAME = 'my_database'   # Name of the database you created
+DB_USER = 'postgres'      # Default PostgreSQL user
+DB_PASS = 'mysecretpassword'  # Password from your environment variable
+
 
 def get_db_connection():
     conn = psycopg2.connect(
@@ -70,11 +73,13 @@ def encode_plain_text():
     if plain_text is None:
         return jsonify({"error": "Please provide 'plain_text' in the JSON body."}), 400
 
+    
     unique_id = uuid.uuid4().hex
 
     # Encode the plain text
     encrypted_text = base64.b64encode(plain_text.encode()).decode()
 
+    
     message = {
         'action': 'encode',
         'text': encrypted_text,
@@ -87,6 +92,7 @@ def encode_plain_text():
     channel.basic_publish(exchange='', routing_key='encoding_queue', body=json.dumps(message))
     connection.close()
 
+    
     conn = get_db_connection()
     with conn:
         with conn.cursor() as cur:
@@ -125,8 +131,10 @@ def decode_text():
     if encrypted_text is None:
         return jsonify({"error": "Please provide 'encrypted_text' in the JSON body."}), 400
 
+    # Generate a unique ID
     unique_id = uuid.uuid4().hex
 
+    # Send message to RabbitMQ
     message = {
         'action': 'decode',
         'text': encrypted_text,
